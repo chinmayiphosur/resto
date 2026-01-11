@@ -5,78 +5,107 @@ const cors = require("cors");
 
 const app = express();
 
-/* Middleware */
+/* =========================
+   CORS CONFIG (IMPORTANT)
+   ========================= */
+const allowedOrigins = [
+  "http://localhost:5173",                  // local frontend
+  "https://resto-frontend-cbmb.onrender.com" // Render frontend
+];
+
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   })
 );
+
 app.use(express.json());
 
-/* Database */
+/* =========================
+   DATABASE CONNECTION
+   ========================= */
 mongoose
   .connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("✅ MongoDB connected");
-    
-    // Create default users if they don't exist
-    const User = require('./models/User');
-    
-    // Check if default admin user exists
-    const adminExists = await User.findOne({ username: 'admin' });
+
+    const User = require("./models/User");
+
+    // Default admin
+    const adminExists = await User.findOne({ username: "admin" });
     if (!adminExists) {
-      const defaultAdmin = new User({
-        username: 'admin',
-        password: 'admin123',
-        role: 'admin'
+      await User.create({
+        username: "admin",
+        password: "admin123",
+        role: "admin",
       });
-      await defaultAdmin.save();
-      console.log('✅ Default admin user created: admin / admin123');
+      console.log("✅ Default admin created (admin / admin123)");
     }
-    
-    // Check if default user exists
-    const userExists = await User.findOne({ username: 'user' });
+
+    // Default user
+    const userExists = await User.findOne({ username: "user" });
     if (!userExists) {
-      const defaultUser = new User({
-        username: 'user',
-        password: 'user123',
-        role: 'user'
+      await User.create({
+        username: "user",
+        password: "user123",
+        role: "user",
       });
-      await defaultUser.save();
-      console.log('✅ Default user created: user / user123');
+      console.log("✅ Default user created (user / user123)");
     }
   })
-  .catch(err => console.error("❌ Mongo error", err));
+  .catch((err) => console.error("❌ MongoDB error:", err));
 
-/* Routes */
+/* =========================
+   ROUTES
+   ========================= */
 app.use("/api/auth", require("./routes/auth.routes"));
 app.use("/api/inventory", require("./routes/inventory.routes"));
 
-/* Health Check */
+/* =========================
+   HEALTH CHECK
+   ========================= */
 app.get("/health", (req, res) => {
   res.json({ status: "UP", time: new Date() });
 });
 
-/* Root */
+/* =========================
+   ROOT
+   ========================= */
 app.get("/", (req, res) => {
   res.send("Inventory Backend Running");
 });
 
-/* Error Handler */
+/* =========================
+   ERROR HANDLER
+   ========================= */
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: "Internal Server Error" });
+  console.error("❌ Error:", err.message);
+  res.status(500).json({ message: err.message || "Internal Server Error" });
 });
 
-/* Graceful Shutdown */
+/* =========================
+   GRACEFUL SHUTDOWN
+   ========================= */
 process.on("SIGINT", async () => {
   console.log("🔴 Server shutting down...");
   await mongoose.connection.close();
   process.exit(0);
 });
 
+/* =========================
+   START SERVER (RENDER SAFE)
+   ========================= */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on port ${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
