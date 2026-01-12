@@ -173,101 +173,54 @@ function InventoryTable({ items, role }) {
     }
   };
 
-  const handleExportCSV = async () => {
-    try {
-      // Get the authentication token
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Authentication required. Please log in.");
-        return;
-      }
+const handleExportCSV = async () => {
+  try {
+    const response = await api.get(
+      "/inventory/export/csv",
+      { responseType: "blob" }
+    );
 
-      // Create a temporary link to trigger download with proper headers
-      const link = document.createElement('a');
-      link.href = `http://localhost:5000/api/inventory/export/csv`;
-      link.setAttribute('download', 'inventory.csv');
-      
-      // Create a new request with the authorization header
-      fetch(link.href, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.blob();
-      })
-      .then(blob => {
-        // Create a download link for the blob
-        const url = window.URL.createObjectURL(blob);
-        const downloadLink = document.createElement('a');
-        downloadLink.href = url;
-        downloadLink.setAttribute('download', 'inventory.csv');
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        downloadLink.remove();
-        window.URL.revokeObjectURL(url);
-      })
-      .catch(error => {
-        console.error("Error exporting CSV:", error);
-        alert("Error exporting CSV: " + error.message);
-      });
-    } catch (error) {
-      console.error("Error exporting CSV:", error);
-      alert("Error exporting CSV: " + (error.message || error));
-    }
-  };
+    const blob = new Blob([response.data], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "inventory.csv";
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error exporting CSV:", error);
+    alert("Error exporting CSV");
+  }
+};
+
 
   const handleExportPDF = async () => {
-    try {
-      // Get the authentication token
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("Authentication required. Please log in.");
-        return;
-      }
+  try {
+    const response = await api.get(
+      "/inventory/export/pdf",
+      { responseType: "blob" }
+    );
 
-      // Create a temporary link to trigger download with proper headers
-      const link = document.createElement('a');
-      link.href = `http://localhost:5000/api/inventory/export/pdf`;
-      link.setAttribute('download', 'inventory.pdf');
-      
-      // Create a new request with the authorization header
-      fetch(link.href, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.blob();
-      })
-      .then(blob => {
-        // Create a download link for the blob
-        const url = window.URL.createObjectURL(blob);
-        const downloadLink = document.createElement('a');
-        downloadLink.href = url;
-        downloadLink.setAttribute('download', 'inventory.pdf');
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        downloadLink.remove();
-        window.URL.revokeObjectURL(url);
-      })
-      .catch(error => {
-        console.error("Error exporting PDF:", error);
-        alert("Error exporting PDF: " + error.message);
-      });
-    } catch (error) {
-      console.error("Error exporting PDF:", error);
-      alert("Error exporting PDF: " + (error.message || error));
-    }
-  };
+    const blob = new Blob([response.data], { type: "application/pdf" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "inventory.pdf";
+    document.body.appendChild(a);
+    a.click();
+
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error exporting PDF:", error);
+    alert("Error exporting PDF");
+  }
+};
 
   return (
     <div>
